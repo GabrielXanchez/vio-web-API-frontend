@@ -1,47 +1,118 @@
+import { useEffect, useState } from "react";
 import "./App.css";
-import {useEffect, useState} from React;
 
 function App() {
-    const [statusApi, setStatusApi] = useState(null);
-    const [eventos, setEventos] = useState([]);
-    const [eventoSelecionado, setEventoSelecionado] = useState(null);
-    const [erro, setErro] = useState("");
+  const [statusApi, setStatusApi] = useState(null);
+  const [eventos, setEventos] = useState([]);
+  const [eventoSelecionado, setEventoSelecionado] = useState(null);
+  const [erro, setErro] = useState("");
 
-    return (
-        <div className="pagina">
+  // Executado quando o componente é carregado
+  useEffect(() => {
+    async function carregarDados() {
+      try {
+        // Consultar o status da API
+        const respostaStatus = await fetch("/api/status");
+        if (!respostaStatus.ok) {
+          throw new Error("Erro ao consultar o status.");
+        }
 
-            <header className="cabecalho">
-                <h1>VIO Web</h1>
+        const dadosStatus = await respostaStatus.json();
+        setStatusApi(dadosStatus);
 
-                <p>
-                    Venda de Ingressos Online
-                </p>
-            </header>
+        // Consultar todos os eventos
+        const respostaEventos = await fetch("/api/eventos");
+        if (!respostaEventos.ok) {
+          throw new Error("Erro ao consultar os eventos.");
+        }
 
-            <main className="conteudo">
+        const dadosEventos = await respostaEventos.json();
+        setEventos(dadosEventos);
 
-                <section className="card">
+      } catch (error) {
+        setErro(error.message);
+      }
+    }
 
-                    <h2>
-                        Ambiente preparado com sucesso!
-                    </h2>
+    carregarDados();
+  }, []);
 
-                    <p>
-                        O Front-End React do projeto VIO
-                        está funcionando corretamente.
-                    </p>
+  // Consultar um evento pelo ID
+  async function buscarEvento(id) {
+    try {
+      setErro("");
 
-                    <p className="status">
-                        Front-End: Online
-                    </p>
+      const resposta = await fetch(`/api/eventos/${id}`);
 
-                </section>
+      if (!resposta.ok) {
+        throw new Error("Evento não encontrado.");
+      }
 
-            </main>
+      const dados = await resposta.json();
+      setEventoSelecionado(dados);
 
-        </div>
-    );
+    } catch (error) {
+      setErro(error.message);
+    }
+  }
 
+  return (
+    <div className="pagina">
+      <header className="cabecalho">
+        <h1>VIO WEB</h1>
+        <p>Venda de Ingressos Online</p>
+      </header>
+
+      <main className="conteudo">
+
+        <section className="card">
+          <h2>Status da API</h2>
+
+          <p>
+            Back-end: {statusApi?.status || "Indisponível"}
+          </p>
+
+          <p>{statusApi?.mensagem}</p>
+        </section>
+
+        <section className="card">
+          <h2>Eventos Disponíveis</h2>
+
+          {eventos.map((evento) => (
+            <div key={evento.id}>
+              <h3>{evento.nome}</h3>
+              <p>Local: {evento.local}</p>
+              <p>Data: {evento.data}</p>
+              <p>Preço: R$ {evento.preco.toFixed(2)}</p>
+
+              <button onClick={() => buscarEvento(evento.id)}>
+                Ver detalhes
+              </button>
+
+              <hr />
+            </div>
+          ))}
+        </section>
+
+        {eventoSelecionado && (
+          <section className="card">
+            <h2>Detalhes do Evento</h2>
+
+            <h3>{eventoSelecionado.nome}</h3>
+            <p>{eventoSelecionado.descricao}</p>
+            <p>Local: {eventoSelecionado.local}</p>
+            <p>Data: {eventoSelecionado.data}</p>
+            <p>
+              Preço: R$ {eventoSelecionado.preco.toFixed(2)}
+            </p>
+          </section>
+        )}
+
+        {erro && <p className="erro">{erro}</p>}
+
+      </main>
+    </div>
+  );
 }
 
 export default App;
